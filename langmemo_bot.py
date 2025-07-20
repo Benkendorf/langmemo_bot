@@ -15,6 +15,7 @@ bot = TeleBot(token=TELEGRAM_TOKEN)
 
 class TokenAuthClient:
     def __init__(self, api_base=API_URL, env_path='.env'):
+        self.api_base = api_base
         self.refresh_url = f'{self.api_base}/auth/jwt/refresh/'
         self.env_path = env_path
 
@@ -33,13 +34,18 @@ class TokenAuthClient:
         resp.raise_for_status()
         data = resp.json()
         self.access_token = data['access']
-        self.refresh_token = data['refresh']
         self._save_tokens()
 
     def _request_with_refresh(self, method, path, **kwargs):
         url = f'{self.api_base}{path}'
         headers = kwargs.pop('headers', {})
+        print('--------------------')
+        print(headers)
+        print('--------------------')
         headers.update(self._get_headers())
+        print('--------------------')
+        print(headers)
+        print('--------------------')
 
         resp = requests.request(method, url, headers=headers, **kwargs)
         if resp.status_code == 401:
@@ -56,6 +62,7 @@ class TokenAuthClient:
     def post(self, path, **kwargs):
         return self._request_with_refresh('POST', path, **kwargs)
     
+client = TokenAuthClient(api_base=API_URL)
 
 @bot.message_handler(commands=['start'])
 def wake_up(message):
@@ -78,13 +85,13 @@ def add_token(message):
     chat_id = message.chat.id
     name = message.chat.first_name
 
-    #keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #button_add_token = types.KeyboardButton('/add_token')
-    #keyboard.add(button_add_token)
+    payload = {'token': message.text, 'chat_id': str(chat_id)}
+    resp = client.post(path='users/tg_token/', json=payload)
+    print(resp)
 
     bot.send_message(
         chat_id=chat_id,
-        text=(f'Привет, {name}. Токен валиден!')
+        text=(f'Привет, {name}. {resp}')
         #reply_markup=keyboard,
     )
 
