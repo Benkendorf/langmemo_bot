@@ -1,6 +1,7 @@
 import os
 import requests
 
+from requests.exceptions import HTTPError
 from dotenv import load_dotenv, set_key
 from telebot import types, TeleBot
 
@@ -85,13 +86,16 @@ def add_token(message):
     chat_id = message.chat.id
     name = message.chat.first_name
 
-    payload = {'token': message.text, 'chat_id': str(chat_id)}
-    resp = client.post(path='users/tg_token/', json=payload)
+    payload = {'api_token': message.text, 'telegram_chat_id': str(chat_id)}
+    try:
+        resp = client.post(path='users/tg_token/', json=payload)
+    except HTTPError as e:
+        resp = f'Что-то пошло не так! {e}'
     print(resp)
 
     bot.send_message(
         chat_id=chat_id,
-        text=(f'Привет, {name}. {resp}')
+        text=(f'Привет, {name}. {resp}\n ')
         #reply_markup=keyboard,
     )
 
