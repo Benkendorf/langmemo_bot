@@ -6,7 +6,7 @@ from tabulate import tabulate
 from dotenv import load_dotenv, set_key
 from telebot import types, TeleBot
 
-load_dotenv()
+load_dotenv('prod.env')
 
 API_URL = os.getenv('API_URL')
 
@@ -88,13 +88,12 @@ def add_token(message):
     payload = {'api_token': message.text, 'telegram_chat_id': str(chat_id)}
     try:
         resp = client.post(path='users/tg_token/', json=payload)
-    except HTTPError as e:
-        resp = f'Что-то пошло не так! {e}'
-    print(resp)
+    except HTTPError:
+        resp = f'Пользователя с таким токеном не найдено! Проверьте корректность токена.'
 
     bot.send_message(
         chat_id=chat_id,
-        text=(f'Привет, {name}. {resp}\n'),
+        text=(f'Привет, {name}. Токен добавлен успешно!\n'),
         reply_markup=keyboard,
     )
 
@@ -112,14 +111,11 @@ def get_info(message):
         resp = client.get(path='users/get_info/', json=payload)
     except HTTPError as e:
         resp = f'Что-то пошло не так! {e}'
-    print(resp)
 
     lines = []
     for d in resp.json()['calendar']:
         lines.append(f"{d['weekday']:<12} | ({d['diff']:+}) | {d['end_of_day']}")
     calendar_string = "\n".join(lines)
-    print('\n')
-    print(calendar_string)
 
     bot.send_message(
         chat_id=chat_id,
