@@ -6,7 +6,7 @@ from tabulate import tabulate
 from dotenv import load_dotenv, set_key
 from telebot import types, TeleBot
 
-load_dotenv('prod.env')
+load_dotenv('.env')
 
 API_URL = os.getenv('API_URL')
 
@@ -88,12 +88,13 @@ def add_token(message):
     payload = {'api_token': message.text, 'telegram_chat_id': str(chat_id)}
     try:
         resp = client.post(path='users/tg_token/', json=payload)
-    except HTTPError:
-        resp = f'Пользователя с таким токеном не найдено! Проверьте корректность токена.'
+        resp_text = 'Токен добавлен успешно!'
+    except HTTPError as e:
+        resp_text = f'Пользователя с таким токеном не найдено! Проверьте корректность токена.'
 
     bot.send_message(
         chat_id=chat_id,
-        text=(f'Привет, {name}. Токен добавлен успешно!\n'),
+        text=(f'Привет, {name}. {resp_text}\n'),
         reply_markup=keyboard,
     )
 
@@ -109,19 +110,21 @@ def get_info(message):
     payload = {'telegram_chat_id': str(chat_id)}
     try:
         resp = client.get(path='users/get_info/', json=payload)
-    except HTTPError as e:
-        resp = f'Что-то пошло не так! {e}'
+        lines = ['',]
+        for d in resp.json()['calendar']:
+            lines.append(f"{d['weekday']:<12} | ({d['diff']:+}) | {d['end_of_day']}")
+        calendar_string = "\n".join(lines)
 
-    lines = []
-    for d in resp.json()['calendar']:
-        lines.append(f"{d['weekday']:<12} | ({d['diff']:+}) | {d['end_of_day']}")
-    calendar_string = "\n".join(lines)
+        resp_text = (f'Карточек в очереди сейчас: {resp.json()["cards_total_now"]}\n\n'
+                      "```" + calendar_string + "```")
+    except HTTPError as e:
+        resp_text = 'Ваш аккаунт LangMemo не привязан. Создайте токен [по ссылке](https://langmemo.ru/pages/tg/), и пришлите его сюда.'
+
 
     bot.send_message(
         chat_id=chat_id,
-        text=(f'Карточек в очереди сейчас: {resp.json()["cards_total_now"]}\n\n'
-              '<pre>' + calendar_string + '</pre>'),
-        parse_mode='HTML',
+        text = resp_text,
+        parse_mode='Markdown',
         reply_markup=keyboard,
     )
 
