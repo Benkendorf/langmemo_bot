@@ -57,8 +57,10 @@ class TokenAuthClient:
 
     def post(self, path, **kwargs):
         return self._request_with_refresh('POST', path, **kwargs)
-    
+
+
 client = TokenAuthClient(api_base=API_URL)
+
 
 @bot.message_handler(commands=['start'])
 def wake_up(message):
@@ -67,14 +69,16 @@ def wake_up(message):
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_get_info = types.KeyboardButton('/get_info')
-    keyboard.add(button_get_info)
+    button_get_decks = types.KeyboardButton('/get_decks')
+    keyboard.add(button_get_info, button_get_decks)
 
     bot.send_message(
         chat_id=chat_id,
         text=(f'Привет, {name}. Чтобы добавить токен LangMemo'
-               ' пришли его.'),
+              ' пришли его.'),
         reply_markup=keyboard,
     )
+
 
 @bot.message_handler(regexp=r'^[A-Za-z0-9]{30}$')
 def add_token(message):
@@ -83,7 +87,8 @@ def add_token(message):
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_get_info = types.KeyboardButton('/get_info')
-    keyboard.add(button_get_info)
+    button_get_decks = types.KeyboardButton('/get_decks')
+    keyboard.add(button_get_info, button_get_decks)
 
     payload = {'api_token': message.text, 'telegram_chat_id': str(chat_id)}
     try:
@@ -98,14 +103,15 @@ def add_token(message):
         reply_markup=keyboard,
     )
 
+
 @bot.message_handler(commands=['get_info'])
 def get_info(message):
     chat_id = message.chat.id
-    name = message.chat.first_name
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_get_info = types.KeyboardButton('/get_info')
-    keyboard.add(button_get_info)
+    button_get_decks = types.KeyboardButton('/get_decks')
+    keyboard.add(button_get_info, button_get_decks)
 
     payload = {'telegram_chat_id': str(chat_id)}
     try:
@@ -120,11 +126,31 @@ def get_info(message):
     except HTTPError as e:
         resp_text = 'Ваш аккаунт LangMemo не привязан. Создайте токен [по ссылке](https://langmemo.ru/pages/tg/), и пришлите его сюда.'
 
+    bot.send_message(
+        chat_id=chat_id,
+        text=resp_text,
+        parse_mode='Markdown',
+        reply_markup=keyboard,
+    )
+
+
+@bot.message_handler(commands=['get_decks'])
+def get_decks(message):
+    chat_id = message.chat.id
+
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button_get_info = types.KeyboardButton('/get_info')
+    button_get_decks = types.KeyboardButton('/get_decks')
+    keyboard.add(button_get_info, button_get_decks)
+
+    payload = {'telegram_chat_id': str(chat_id)}
+    resp = client.get(path='users/get_decks/', json=payload)
+
+    print(resp.json())
 
     bot.send_message(
         chat_id=chat_id,
-        text = resp_text,
-        parse_mode='Markdown',
+        text=resp.json(),
         reply_markup=keyboard,
     )
 
@@ -136,13 +162,15 @@ def non_token_text(message):
 
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_get_info = types.KeyboardButton('/get_info')
-    keyboard.add(button_get_info)
+    button_get_decks = types.KeyboardButton('/get_decks')
+    keyboard.add(button_get_info, button_get_decks)
 
     bot.send_message(
         chat_id=chat_id,
         text=(f'Привет, {name}. Токен не валиден!'),
         reply_markup=keyboard,
     )
+
 
 def main():
     bot.infinity_polling()
