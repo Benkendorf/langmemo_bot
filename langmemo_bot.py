@@ -1,10 +1,12 @@
 import os
 import requests
+import json
 
 from requests.exceptions import HTTPError
 from tabulate import tabulate
 from dotenv import load_dotenv, set_key
 from telebot import types, TeleBot
+from constants import PAGE_SIZE
 
 load_dotenv('.env')
 
@@ -146,11 +148,16 @@ def get_decks(message):
     payload = {'telegram_chat_id': str(chat_id)}
     resp = client.get(path='users/get_decks/', json=payload)
 
-    print(resp.json())
+    pretty_json = json.dumps(resp.json(), indent=4)
+
+    print(pretty_json)
+
+    resp_text = '\n'.join([f"*{deck['deck_name']}* всего карт: {deck['card_count']}шт. винрейт: {deck['winrate']}% в очереди: {deck['cards_in_queue']}шт." for deck in resp.json()['results']])
 
     bot.send_message(
         chat_id=chat_id,
-        text=resp.json(),
+        text=resp_text,
+        parse_mode='Markdown',
         reply_markup=keyboard,
     )
 
