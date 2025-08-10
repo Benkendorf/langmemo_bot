@@ -88,17 +88,17 @@ def add_token(message):
     chat_id = message.chat.id
     name = message.chat.first_name
 
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    button_get_info = types.KeyboardButton('/get_info')
-    button_get_decks = types.KeyboardButton('/get_decks')
-    keyboard.add(button_get_info, button_get_decks)
-
     payload = {'api_token': message.text, 'telegram_chat_id': str(chat_id)}
     try:
         resp = client.post(path='users/tg_token/', json=payload)
         resp_text = 'Токен добавлен успешно!'
-    except HTTPError as e:
+        keyboard = types.InlineKeyboardMarkup()
+        button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
+        button_get_decks = types.InlineKeyboardButton(callback_data='get_decks', text='Колоды')
+        keyboard.add(button_get_info, button_get_decks)
+    except HTTPError:
         resp_text = f'Пользователя с таким токеном не найдено! Проверьте корректность токена.'
+        keyboard = None
 
     bot.send_message(
         chat_id=chat_id,
@@ -107,7 +107,6 @@ def add_token(message):
     )
 
 
-#@bot.message_handler(commands=['get_info'])
 @bot.callback_query_handler(func=lambda call: call.data == 'get_info')
 def get_info(call):
     message = call.message
@@ -141,7 +140,6 @@ def get_info(call):
     bot.answer_callback_query(call.id)
 
 
-#@bot.message_handler(commands=['get_decks'])
 @bot.callback_query_handler(func=lambda call: 'get_decks' in call.data)
 def get_decks(call):
     message = call.message
@@ -192,15 +190,9 @@ def non_token_text(message):
     chat_id = message.chat.id
     name = message.chat.first_name
 
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    button_get_info = types.KeyboardButton('/get_info')
-    button_get_decks = types.KeyboardButton('/get_decks')
-    keyboard.add(button_get_info, button_get_decks)
-
     bot.send_message(
         chat_id=chat_id,
-        text=(f'Привет, {name}. Токен не валиден!'),
-        reply_markup=keyboard,
+        text=(f'Привет, {name}. Токен не валиден!\nВведите другой токен.'),
     )
 
 
