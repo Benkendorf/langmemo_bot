@@ -69,7 +69,6 @@ def wake_up(message):
     chat_id = message.chat.id
     name = message.chat.first_name
 
-    #keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard = types.InlineKeyboardMarkup()
     button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
     button_get_decks = types.InlineKeyboardButton(callback_data='get_decks', text='Колоды')
@@ -148,10 +147,11 @@ def get_decks(call):
     keyboard = types.InlineKeyboardMarkup()
 
     payload = {'telegram_chat_id': str(chat_id)}
+    current_page = 1
 
     if call.data.split('_')[-1].isnumeric():
-        page = call.data.split('_')[-1]
-        resp = client.get(path=f'users/get_decks/?page={page}', json=payload)
+        current_page = call.data.split('_')[-1]
+        resp = client.get(path=f'users/get_decks/?page={current_page}', json=payload)
     else:
         resp = client.get(path='users/get_decks/', json=payload)
 
@@ -170,10 +170,13 @@ def get_decks(call):
     button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
     keyboard.add(button_get_info)
 
-    #pretty_json = json.dumps(resp.json(), indent=4)
-    #print(pretty_json)
+    pretty_json = json.dumps(resp.json(), indent=4)
+    print(pretty_json)
 
     resp_text = '\n\n'.join([f"*{deck['deck_name']}* карт в очереди: {deck['cards_in_queue']}/{deck['card_count']}шт. винрейт: {deck['winrate']}%" for deck in resp.json()['results']])
+
+    if resp.json()['count'] > PAGE_SIZE:
+        resp_text += f"\n{PAGE_SIZE*int(current_page)}/{resp.json()['count']}"
 
     bot.send_message(
         chat_id=chat_id,
