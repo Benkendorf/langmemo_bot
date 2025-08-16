@@ -95,9 +95,15 @@ def add_token(message):
         button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
         button_get_decks = types.InlineKeyboardButton(callback_data='get_decks', text='Колоды')
         keyboard.add(button_get_info, button_get_decks)
-    except HTTPError:
-        resp_text = f'Пользователя с таким токеном не найдено! Проверьте корректность токена.'
-        keyboard = None
+    except HTTPError as e:
+        resp_text = e.response.json()['user_message']
+        if e.response.json()['error_code'] == 'token_already_in_use_by_current_chat_id':
+            keyboard = types.InlineKeyboardMarkup()
+            button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
+            button_get_decks = types.InlineKeyboardButton(callback_data='get_decks', text='Колоды')
+            keyboard.add(button_get_info, button_get_decks)
+        else:
+            keyboard = None
 
     bot.send_message(
         chat_id=chat_id,
