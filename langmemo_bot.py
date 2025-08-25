@@ -156,7 +156,7 @@ def get_decks(call):
     current_page = 1
 
     if call.data.split('_')[-1].isnumeric():
-        current_page = call.data.split('_')[-1]
+        current_page = int(call.data.split('_')[-1])
         resp = client.get(path=f'users/get_decks/?page={current_page}', json=payload)
     else:
         resp = client.get(path='users/get_decks/', json=payload)
@@ -176,13 +176,14 @@ def get_decks(call):
     button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
     keyboard.add(button_get_info)
 
-    pretty_json = json.dumps(resp.json(), indent=4)
-    print(pretty_json)
+    #pretty_json = json.dumps(resp.json(), indent=4)
+    #print(pretty_json)
 
-    resp_text = '\n\n'.join([f"*{deck['deck_name']}* карт в очереди: {deck['cards_in_queue']}/{deck['card_count']}шт. винрейт: {deck['winrate']}%" for deck in resp.json()['results']])
+    resp_text = '\n\n'.join([f"*{deck['deck_name']}*\nКарт в очереди: {deck['cards_in_queue']}/{deck['card_count']}шт.\n🏆 Процент успеха: {deck['winrate']}%" for deck in resp.json()['results']])
 
     if resp.json()['count'] > PAGE_SIZE:
-        resp_text += f"\n{PAGE_SIZE*int(current_page)}/{resp.json()['count']}"
+        resp_text += f"\n\n🔸 Колоды {PAGE_SIZE*(current_page-1)+1}-{PAGE_SIZE*current_page} из {resp.json()['count']} 🔸"
+        #resp_text += f"\n{PAGE_SIZE*int(current_page)}/{resp.json()['count']}"
 
     bot.send_message(
         chat_id=chat_id,
