@@ -120,7 +120,6 @@ def get_info(call):
     keyboard = types.InlineKeyboardMarkup()
     button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
     button_get_decks = types.InlineKeyboardButton(callback_data='get_decks', text='Колоды')
-    keyboard.add(button_get_info, button_get_decks)
 
     payload = {'telegram_chat_id': str(chat_id)}
     try:
@@ -132,6 +131,7 @@ def get_info(call):
 
         resp_text = (f'Карточек в очереди сейчас: {resp.json()["cards_total_now"]}\n\n'
                       "```" + calendar_string + "```")
+        keyboard.add(button_get_info, button_get_decks)
     except HTTPError as e:
         resp_text = 'Ваш аккаунт LangMemo не привязан. Создайте токен [по ссылке](https://langmemo.ru/pages/tg/), и пришлите его сюда.'
 
@@ -155,35 +155,43 @@ def get_decks(call):
     payload = {'telegram_chat_id': str(chat_id)}
     current_page = 1
 
-    if call.data.split('_')[-1].isnumeric():
-        current_page = int(call.data.split('_')[-1])
-        resp = client.get(path=f'users/get_decks/?page={current_page}', json=payload)
-    else:
-        resp = client.get(path='users/get_decks/', json=payload)
+    try:
+        if call.data.split('_')[-1].isnumeric():
+            current_page = int(call.data.split('_')[-1])
+            resp = client.get(path=f'users/get_decks/?page={current_page}', json=payload)
+        else:
+            resp = client.get(path='users/get_decks/', json=payload)
 
-    nav_buttons = []
+        nav_buttons = []
 
-    if resp.json()['previous'] is not None:
-        page = resp.json()['previous'].split('=')[-1]
-        button_previous = types.InlineKeyboardButton(callback_data=f'get_decks_{page}', text='<-')
-        nav_buttons.append(button_previous)
-    if resp.json()['next'] is not None:
-        page = resp.json()['next'].split('=')[-1]
-        button_next = types.InlineKeyboardButton(callback_data=f'get_decks_{page}', text='->')
-        nav_buttons.append(button_next)
+        if resp.json()['previous'] is not None:
+            page = resp.json()['previous'].split('=')[-1]
+            button_previous = types.InlineKeyboardButton(callback_data=f'get_decks_{page}', text='<-')
+            nav_buttons.append(button_previous)
+        if resp.json()['next'] is not None:
+            page = resp.json()['next'].split('=')[-1]
+            button_next = types.InlineKeyboardButton(callback_data=f'get_decks_{page}', text='->')
+            nav_buttons.append(button_next)
 
-    keyboard.add(*nav_buttons, row_width=2)
-    button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
-    keyboard.add(button_get_info)
+        keyboard.add(*nav_buttons, row_width=2)
 
-    #pretty_json = json.dumps(resp.json(), indent=4)
-    #print(pretty_json)
+        #pretty_json = json.dumps(resp.json(), indent=4)
+        #print(pretty_json)
 
-    resp_text = '\n\n'.join([f"*{deck['deck_name']}*\nКарт в очереди: {deck['cards_in_queue']}/{deck['card_count']}шт.\n🏆 Процент успеха: {deck['winrate'] or 0}%" for deck in resp.json()['results']])
+        if len(resp.json()['results']) == 0:
+            resp_text = 'Колод нет. Создайте первую колоду [на главной странице сайта](https://langmemo.ru/)'
+        else:
+            button_get_info = types.InlineKeyboardButton(callback_data='get_info', text='Календарь')
+            keyboard.add(button_get_info)
+            resp_text = '\n\n'.join([f"*{deck['deck_name']}*\nКарт в очереди: {deck['cards_in_queue']}/{deck['card_count']}шт.\n🏆 Процент успеха: {deck['winrate'] or 0}%" for deck in resp.json()['results']])
 
-    if resp.json()['count'] > PAGE_SIZE:
-        resp_text += f"\n\n🔸 Колоды {PAGE_SIZE*(current_page-1)+1}-{PAGE_SIZE*current_page} из {resp.json()['count']} 🔸"
-        #resp_text += f"\n{PAGE_SIZE*int(current_page)}/{resp.json()['count']}"
+
+        if resp.json()['count'] > PAGE_SIZE:
+            resp_text += f"\n\n🔸 Колоды {PAGE_SIZE*(current_page-1)+1}-{PAGE_SIZE*current_page} из {resp.json()['count']} 🔸"
+            #resp_text += f"\n{PAGE_SIZE*int(current_page)}/{resp.json()['count']}"
+
+    except HTTPError as e:
+        resp_text = 'Ваш аккаунт LangMemo не привязан. Создайте токен [по ссылке](https://langmemo.ru/pages/tg/), и пришлите его сюда.'
 
     bot.send_message(
         chat_id=chat_id,
